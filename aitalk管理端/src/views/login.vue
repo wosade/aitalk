@@ -1,10 +1,13 @@
 <script setup>
-import { ref } from 'vue';
+import { reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
-const formdata=ref({
+import { login } from '../api';
+import { useRouter } from 'vue-router';
+const formdata=reactive({
   username:'',
   password:''
 })
+const router=useRouter()
 const formref=ref(null)
 const rules=ref({
   username:[{    
@@ -19,11 +22,21 @@ const rules=ref({
   }]
 })
 // 登录表单
-const login=(formel)=>{
+const submit=(formel)=>{
   if(!formel)return
   formel.validate((valid) => {
     if (valid) {
-      ElMessage.success('登录成功');
+      login(formdata).then(res=>{
+        if(res.code==='200'){
+        localStorage.setItem('token',res.data.token)
+        // 判断用户登录类型来决定跳转页面
+        router.push('/')
+        ElMessage.success('登录成功');}
+        else {
+          ElMessage.error(res.data.message);
+        }
+      })
+      
     } else {
       ElMessage.error('请填写完整信息');
     }
@@ -36,7 +49,7 @@ const login=(formel)=>{
   <div class="content">
     <p class="text">登录</p>
     <div class="form">
-    <el-form v-model="formdata" ref="formref" :rules="rules">
+    <el-form :model="formdata" ref="formref" :rules="rules">
       <el-form-item label="用户名" prop="username">
         <el-input v-model="formdata.username" placeholder="请输入用户名"></el-input>
       </el-form-item>
@@ -44,8 +57,7 @@ const login=(formel)=>{
         <el-input v-model="formdata.password" placeholder="请输入密码" type="password"></el-input>
       </el-form-item>
       <div class="button">
-      <el-button type="primary" @click="login(formref)">登录</el-button>
-      <el-button type="info">注册</el-button>
+      <el-button type="primary" @click="submit(formref)">登录</el-button>
     </div>
     </el-form>
     <div class="footer">

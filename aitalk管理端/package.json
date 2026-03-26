@@ -11,6 +11,8 @@
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
     "@tsparticles/vue3": "^3.0.1",
+    "@wangeditor/editor": "^5.1.23",
+    "@wangeditor/editor-for-vue": "^5.1.12",
     "axios": "^1.13.6",
     "element-plus": "^2.13.6",
     "less": "^4.6.4",

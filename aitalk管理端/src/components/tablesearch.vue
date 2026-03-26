@@ -16,7 +16,7 @@
       return 'el-select' }
  }
 //  定义表单数据
- const formdata=ref([])
+ const formdata=ref({})
  const formitemattrs=computed(()=>{
   const {formitem}=props;
   // 当屏幕大小不同时 去动态判断一行有几个组件
@@ -25,16 +25,17 @@
  })
   return formitem
   })
-  const emit=defineEmits(['search'])
+  const emit=defineEmits(['search','changeformdata'])
   const formref=ref(null)
   // 搜索表单
   const search=(formel)=>{
-    emit('search',formdata)
+    console.log(formdata.value);
+    emit('changeformdata',formdata.value)
   }
   // 重置表单
   const reset=(formel)=>{
     formel.resetFields();
-    emit('search',formdata)
+    emit('changeformdata',formdata.value)
   }
 </script>
 <template>

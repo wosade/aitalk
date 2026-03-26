@@ -6,9 +6,16 @@ import { ElInput,ElMessage } from 'element-plus'
 import { baseURL } from '@/config/index'
 import RichTextEditor from './RichTextEditor.vue'
 const prop=defineProps({
+// 0 新增 1 编辑
+  check:Number,
+  // 弹窗是否显示
   modelValue:Boolean,
+  // 分类列表
   categorylist:Array,
-  currentarticle:Object
+  // 当前文章详情
+  currentarticle:Object,
+  // 渲染列表
+  search:Function
 })
 
 // 子组件通知父组件进行值修改
@@ -34,6 +41,8 @@ watch(() => prop.currentarticle, (newvalue) => {
     } else {
       imgurl.value = ''
     }
+    console.log(articledetail);
+    
   }
 }, { immediate: true, deep: true }) // 重点是 immediate: true
 // 标签数组
@@ -116,13 +125,23 @@ const formref=ref(null)
 const submit=()=>{
   formref.value.validate((valid,error)=>{
     if(valid){
-      addarticle(articledetail).then(res=>{
+      if(prop.check===0 )addarticle(articledetail).then(res=>{
         console.log(res);
         if(res.code==="200"){ElMessage.success('添加成功')
-        emit('update:modelValue', false)}
+        emit('update:modelValue', false),prop.search()}
       }).catch(err=>{
         ElMessage.error(err.message)
       })
+      else{
+        updatearticle(articledetail,articledetail.id).then(res=>{
+          console.log(res);
+          if(res.code==="200"){ElMessage.success('更新成功')
+          emit('update:modelValue', false),prop.search()}
+        }).catch(err=>{
+          ElMessage.error(err.message)
+        })
+      }
+      
     }
     else{
       ElMessage.error('请填写完整信息')
