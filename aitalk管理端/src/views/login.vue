@@ -29,9 +29,16 @@ const submit=(formel)=>{
       login(formdata).then(res=>{
         if(res.code==='200'){
         localStorage.setItem('token',res.data.token)
+        localStorage.setItem('userInfo',JSON.stringify(res.data.userInfo)
+        )
+        ElMessage.success('登录成功')
         // 判断用户登录类型来决定跳转页面
-        router.push('/')
-        ElMessage.success('登录成功');}
+        if(res.data.userInfo.userType===2){
+        ; router.push('/back')}
+        else {
+          router.push('/')
+        }
+        }
         else {
           ElMessage.error(res.data.message);
         }

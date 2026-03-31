@@ -2,6 +2,7 @@
 import Tablesearch from '@/components/tablesearch.vue';
 import { getmooddiary } from '@/api/index.js';
 import { onMounted, ref } from 'vue'
+import { delmooddiary } from '@/api/index.js';
 import Articledialog from '@/components/articledialog.vue';
 // tablesearch 的传参
 const formitem = [
@@ -54,10 +55,12 @@ const handleSizeChange = (val) => {
   pagesize.pageSize = val
   search()
 }
-// 文章详情弹窗
-const dialogvisble=ref(false)
-// 文章详情弹窗的参数
-const dialogdata=ref({})
+const del = (id) => {
+  delmooddiary(id).then(res => {
+    console.log(res);
+    search()
+  })
+}
 </script>
 <template>
   <Tablesearch @changeformdata="changeformdata" :formitem="formitem">
@@ -72,14 +75,12 @@ const dialogdata=ref({})
     <el-table-column prop="diaryDate" label="创建时间" width="100" /> 
     <el-table-column prop="emotionTriggers" label="情绪触发"  />
     <el-table-column prop="diaryContentPreview" label="内容"/>
-    <el-table-column label="操作" width="200">
+    <el-table-column label="操作" width="100">
       <template #default="scope">
-        <el-button type="primary" size="mini" @click="edit(scope.row)"text>编辑</el-button>
-        <el-button type="danger" size="mini" @click="del(scope.row.id)" text>删除</el-button>
+        <el-button type="danger"  @click="del(scope.row.id)" text>删除</el-button>
       </template>
     </el-table-column>
   </el-table>
-  <Articledialog :modelValue="modelValue" ></Articledialog>
   <!-- 分页组件 -->
   <div class="fenye" style="display: flex;justify-content: flex-end;">
     <el-pagination background layout="prev, pager, next" v-model:current-page="pagesize.currentPage"

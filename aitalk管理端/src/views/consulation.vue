@@ -2,6 +2,7 @@
 import Panelhead from '@/components/panelhead.vue';
 import { onMounted, reactive, ref } from 'vue';
 import { getconslutations,getmessages} from '@/api';
+import MarkdownRenderer from '@/components/MarkdownRenderer.vue';
 onMounted(()=>{
   // 获取咨询记录
   search()
