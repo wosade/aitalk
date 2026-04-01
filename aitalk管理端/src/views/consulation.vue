@@ -24,7 +24,6 @@ const messagesList=ref([])
 // 渲染列表
 const search=()=>{
   getconslutations(pagesize).then(res=>{
-    console.log(res);
     tableData.value=res.data.records
     pagesize.total=res.data.total
   })
@@ -45,10 +44,8 @@ const dialogData=ref({})
 const edit=(row)=>{
   dialogvisble.value=true
   dialogData.value=row
-  console.log(row);
   // 获取会话消息列表
   getmessages(row.id).then(res=>{
-    console.log(res);
     messagesList.value=res.data
   })
 }

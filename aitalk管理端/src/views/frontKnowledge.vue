@@ -2,6 +2,8 @@
 import { getknowledgearticle } from '@/api/font.js'
 import { ref, onMounted, reactive } from 'vue'
 import imgurl from '@/assets/book.png'
+import { useRouter } from 'vue-router'
+const router = useRouter()
 // 推荐文章
 const knowledgearticle = ref([])
 // 左侧推荐文章参数
@@ -14,18 +16,20 @@ const recommendpagelist=reactive({
 // 右侧文章列表参数
 const pagelist=reactive({
   currentPage:1,
-  size:10,
+  size:5,
   total:0
 })
+// 右侧文章列表
+const articlelist = ref([])
 const getlist=(params)=>{
   getknowledgearticle(params).then(res => {
     if (res.code == 200) {
-      params.total = res.data.total
+      pagelist.total=res.data.total
+      articlelist.value=res.data.records
   }
 })
 }
-// 右侧文章列表
-const articlelist = ref([])
+
 onMounted(() => {
   getknowledgearticle(recommendpagelist).then(res => {
     if (res.code == 200) {
@@ -34,7 +38,29 @@ onMounted(() => {
   })
  getlist(pagelist)
 })
-
+// 获取图片
+const getimage=(url)=>{
+  if(!url){
+    return 'https://file.itndedu.com/psychology_ai.png'
+  }
+  if(url.startsWith('http')){
+    return url
+  }
+  return 'http://159.75.169.224:1235'+url
+}
+// 分页组件的函数
+const handleCurrentChange = (val) => {
+  pagelist.currentPage = val
+  getlist(pagelist)
+}
+const handleSizeChange = (val) => {
+  pagelist.pageSize = val
+  getlist(pagelist)
+}
+// 跳转详情页
+const toDetail=(id)=>{
+  router.push(`/articledetail?id=${id}`)
+}
 </script>
 <template>
   <div class="knowledge-container">
@@ -45,12 +71,11 @@ onMounted(() => {
       </div>
     </div>
     <div class="content">
-
       <!-- 左侧菜单 -->
       <div class="recommend-section">
         <div class="section-title">推荐阅读</div>
         <div class="recommend-list">
-          <div v-for="item in knowledgearticle" :key="item.id" class="recommend-item">
+          <div v-for="item in knowledgearticle" :key="item.id" class="recommend-item" @click="toDetail(item.id)">
             <span class="section-title">{{item.title}}</span>
             <span class="read-count">
               <el-icon><View/></el-icon>
@@ -60,15 +85,44 @@ onMounted(() => {
       </div>
       <!-- 右侧内容 -->
       <div class="article-list">
-
+        <div v-for="item in articlelist" :key="item.id" class="article-item" @click="toDetail(item.id)">
+              <el-image :src="getimage(item.coverImage)"  style="width: 240px; height: 150px; border-radius: 8px;"></el-image>
+              <div class="info">
+                <div class="title">
+                  <h3>{{item.title}}</h3>
+                  <el-tag Plain type="primary">{{item.categoryName}}</el-tag>
+                </div>
+                <div style="margin-top: 10px;"></div>
+                <div class="flex-box">
+                  <el-icon><Avatar/></el-icon>
+                  <span>{{item.authorName}}</span>
+                </div>
+                <div class="flex-box">
+                  <el-icon><List/></el-icon>
+                  <span>{{ item.createdAt }}</span>
+                </div>
+                <div class="flex-box" style="margin-top: 20px;">
+              <el-icon>
+                <Platform />
+              </el-icon>
+              <span>观看人数：{{ item.watchCount || 0 }}</span>
+            </div>
+              </div>
+        </div>
       </div>
     </div>
+     <div class="pagination-wrapper">
+      <!-- 分页组件 -->
+      <el-pagination background layout="prev, pager, next" v-model:current-page="pagelist.currentPage"
+        v-model:page-size="pagelist.size" :total="pagelist.total" @size-change="handleSizeChange"
+        @current-change="handleCurrentChange" />
+        </div>
   </div>
 </template>
 <style scoped lang="less">
 .knowledge-container {
   background: linear-gradient(135deg, #fafbfc 0%, #f7f9fc 50%, #f2f6fa 100%);
-
+  overflow: hidden;
   .flex-box {
     display: flex;
     align-items: center;
@@ -91,10 +145,10 @@ onMounted(() => {
   }
 
   .content {
+  overflow: hidden;
     display: flex;
     gap: 20px;
     margin: 0 auto;
-    width: 1200px;
     padding: 20px;
 
     .recommend-section {
@@ -139,7 +193,6 @@ onMounted(() => {
 
     .article-list {
       flex: 1;
-
       .article-item {
         background: white;
         border-radius: 12px;

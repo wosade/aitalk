@@ -34,7 +34,6 @@ const search = () => {
     currentPage: pagesize.currentPage,
     size: pagesize.pageSize
   }).then(res => {
-    console.log(res);
     pagesize.total = res.data.total
     tabledata.value = res.data.records
   })
@@ -57,7 +56,6 @@ const handleSizeChange = (val) => {
 }
 const del = (id) => {
   delmooddiary(id).then(res => {
-    console.log(res);
     search()
   })
 }

@@ -25,7 +25,6 @@ const submitForm = async (formel) => {
   if(!formel)return 
   await formel.validate()
     register(form.value).then(res=>{
-      console.log(res);
       if(res.code==='200'){
         ElMessage.success('注册成功')
         router.push('/login')

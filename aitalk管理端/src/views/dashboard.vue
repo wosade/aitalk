@@ -11,10 +11,7 @@ import * as echarts from 'echarts'
 const analysis = ref({})
 onMounted(() => {
   getanalysis().then(res => {
-    console.log(res);
     analysis.value = res.data
-    console.log(analysis.value);
-    
     nextTick(()=>{
       initEmotionChart()
       initConsultationChart()

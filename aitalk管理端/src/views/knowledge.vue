@@ -14,8 +14,6 @@ onMounted(()=>{
   // 获取分类列表
   getcategory().then(res=>{
     categorylist.value=res.data
-    console.log(res.data);
-    
     // 处理分类列表，添加 value 属性
     categorylist.value=res.data.map(item=>{
       categorymap[item.id]=item.categoryName
@@ -25,12 +23,10 @@ onMounted(()=>{
       }
     }
     )
-console.log('categorylist', categorylist.value);
 })
   search()
   getarticleDetail({
   }).then(res => {
-    console.log(res.data);
   })
 })
 const route = useRoute()
@@ -66,7 +62,6 @@ const search=()=>{
     currentPage:pagesize.currentPage,
     size:pagesize.pageSize
   }).then(res=>{
-    console.log(res);
     pagesize.total=res.data.total
     tabledata.value=res.data.records
   })
@@ -95,13 +90,11 @@ const currentarticle=ref({})
 const check=ref(0)
 const edit=(row)=>{
   ref.value=1
-  console.log(row);
   if(!row.id){
     return 
   }
   else{
     getarticleDetail({id:row.id}).then(res=>{
-      console.log(res.data);
       currentarticle.value=res.data
       dialogVisible.value=true
     })
@@ -116,7 +109,6 @@ const add=()=>{
 // 更新文章状态
 const updatestatus=(id,status)=>{
   updatearticleStatus(id,status).then(res=>{
-    console.log(res);
     if(res.code==="200"){
       ElMessage.success('更新成功')
       search()
@@ -128,7 +120,6 @@ const updatestatus=(id,status)=>{
 // 删除文章
 const del=(id)=>{
   deletearticle(id).then(res=>{
-    console.log(res);
     if(res.code==="200"){
       ElMessage.success('删除成功')
       search()

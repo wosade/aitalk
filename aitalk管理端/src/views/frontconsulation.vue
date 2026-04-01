@@ -48,8 +48,6 @@ const getsessionpage = () => {
     pageParams
   ).then(res => {
     if (res.code === '200') {
-      console.log(res.data);
-
       sessionList.value = res.data.records
       if (res.data.total === 0) {
         createnewsession()
@@ -96,7 +94,6 @@ const startnewsession = (curentmessage) => {
     sessionParams.sessionTitle = `'宁渡AI助手'-${new Date().toLocaleString()}` 
     startsession(sessionParams).then(res => {
     if (res.code === '200') {
-      console.log(res, currentSession.value);
       ElMessage.success('会话创建成功')
       // 更新当前会话状态
       const sessionData = {
@@ -122,7 +119,6 @@ const startnewsession = (curentmessage) => {
       content: curentmessage,
       creatAt: new Date().toLocaleString(),
     })
-    console.log(currentSession.value);
     // ai流式对话
     startairesponse(currentSession.value.sessionId, curentmessage)
     // 获取情感花园
@@ -140,7 +136,6 @@ const startnewsession = (curentmessage) => {
       content: curentmessage,
       creatAt: new Date().toLocaleString(),
     })
-    console.log(currentSession.value);
     // ai流式对话
     startairesponse(currentSession.value.sessionId, curentmessage)
     getemotionrecord()
@@ -212,11 +207,12 @@ const startairesponse = (sessionId, currentMessage) => {
     },
     onclose: () => {
       isTyping.value = false
+     
     }
   })
     .then(res => {
-      console.log(res);
-      // 处理流式数据
+      // 刷新会话列表
+      getsessionpage()
     })
 }
 // 错误处理函数
@@ -283,7 +279,6 @@ const currentemotion=ref({
 const getemotionrecord=()=>{
   getemotiongarden(currentSession.value.sessionId).then(res => {
     if (res.code === '200') {
-      console.log(res.data);
       currentemotion.value = res.data
     }
     else {
