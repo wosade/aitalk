@@ -2,7 +2,7 @@
 import iconurl from '@/assets/robot-fill.png'
 import iconurl1 from '@/assets/like.png'
 import iconurl2 from '@/assets/users.png'
-import { handleError, onMounted, reactive, ref } from 'vue';
+import { computed, handleError, onMounted, reactive, ref } from 'vue';
 import { startsession, getchatrecord, deletechatrecord, getchatdetail, sendChatMessage,getemotiongarden } from '@/api/font';
 import { ElMessage } from 'element-plus';
 import MarkdownRenderer from '@/components/MarkdownRenderer.vue';
@@ -11,6 +11,17 @@ import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { env } from 'echarts';
 // 聊天控制器
 let chatController = null;
+// 每个会话各自维护消息 & 是否正在流式输入
+const messagesBySessionId = reactive({})
+const typingBySessionId = reactive({})
+
+const ensureSessionMessages = (sessionId) => {
+  if (!sessionId) return []
+  if (!messagesBySessionId[sessionId]) {
+    messagesBySessionId[sessionId] = []
+  }
+  return messagesBySessionId[sessionId]
+}
 const createnewsession = () => {
   // 1. 如果有正在进行的 AI 请求，直接掐断
   if (chatController) {
@@ -18,7 +29,8 @@ const createnewsession = () => {
     chatController = null; // 重置控制器
   }
   // 2. 强制重置状态，防止 UI 锁定
-  isTyping.value = false;
+  const oldSid = currentSession.value?.sessionId
+  if (oldSid) typingBySessionId[oldSid] = false
   inputMessage.value = '';
   // 3. 清空对话列表
   message.value = [];
@@ -29,6 +41,10 @@ const createnewsession = () => {
     sessionTitle: '新对话',
   }
   currentSession.value = newSession;
+  // 为新会话初始化本地消息/状态，保证流式回调写入正确容器
+  typingBySessionId[newSession.sessionId] = false
+  messagesBySessionId[newSession.sessionId] = []
+  message.value = messagesBySessionId[newSession.sessionId]
 }
 onMounted(() => {
   createnewsession()
@@ -44,24 +60,31 @@ const pageParams = reactive({
 const sessionList = ref([])
 // 获取聊天记录
 const getsessionpage = () => {
-  getchatrecord(
-    pageParams
-  ).then(res => {
+  return getchatrecord(pageParams).then((res) => {
     if (res.code === '200') {
-      sessionList.value = res.data.records
+      sessionList.value = res.data.records || []
       if (res.data.total === 0) {
         createnewsession()
       }
     }
-    else {
-      ElMessage.error(res.data.msg)
-    }
+    return []
   })
 }
-// AI是否正在输入
-const isTyping = ref(false)
+// 后端返回的 sessionId / 前端本地 id 可能带不同前缀，统一做个归一化对比
+const normalizeSessionId = (sid) => {
+  if (!sid) return sid
+  const str = String(sid)
+  return str.startsWith('session_') ? str.slice('session_'.length) : str
+}
+
 // 当前对话对象
 const currentSession = ref(null)
+// AI是否正在输入（只关心“当前会话”）
+const isTyping = computed(() => {
+  const sid = currentSession.value?.sessionId
+  if (!sid) return false
+  return !!typingBySessionId[sid]
+})
 // 消息输入框
 const inputMessage = ref('')
 // 新对话
@@ -81,6 +104,15 @@ const handlenewsession = () => {
   }
   startnewsession(curentmessage)
 }
+// 简单防抖：避免用户连点/连按 Enter 触发多次发送
+const debounce = (fn, delay = 300) => {
+  let timer = null
+  return (...args) => {
+    if (timer) clearTimeout(timer)
+    timer = setTimeout(() => fn(...args), delay)
+  }
+}
+const handlenewsessionDebounced = debounce(handlenewsession, 300)
 // 开始新会话
 const startnewsession = (curentmessage) => {
   
@@ -103,8 +135,20 @@ const startnewsession = (curentmessage) => {
       }
       // 如果是临时对话
       if (currentSession.value && currentSession.value.status === 'TEMP') {
+        const oldSid = currentSession.value.sessionId
         // 更新为正式对话
         currentSession.value = sessionData
+
+        // 把“临时会话”的本地消息容器迁移到“正式会话”，
+        // 否则流式回调会写进另一个 sessionId 对应的数组里。
+        const oldMessages = messagesBySessionId[oldSid] || message.value
+        messagesBySessionId[sessionData.sessionId] = oldMessages
+        delete messagesBySessionId[oldSid]
+        message.value = messagesBySessionId[sessionData.sessionId]
+
+        const oldTyping = typingBySessionId[oldSid]
+        typingBySessionId[sessionData.sessionId] = !!oldTyping
+        delete typingBySessionId[oldSid]
       }
     }
     else {
@@ -112,6 +156,8 @@ const startnewsession = (curentmessage) => {
     }
     // 刷新会话列表
     getsessionpage()
+    // 确保本地消息容器与 currentSession.sessionId 一致
+    message.value = ensureSessionMessages(currentSession.value?.sessionId)
     // 添加用户初始信息
     message.value.push({
       id: Date.now(),
@@ -129,6 +175,8 @@ const startnewsession = (curentmessage) => {
     sessionParams.sessionTitle = currentSession.value.sessionTitle
     // 刷新会话列表
     getsessionpage()
+    // 确保本地消息容器与 currentSession.sessionId 一致
+    message.value = ensureSessionMessages(currentSession.value?.sessionId)
     // 添加用户初始信息
     message.value.push({
       id: Date.now(),
@@ -144,12 +192,14 @@ const startnewsession = (curentmessage) => {
 }
 // ai流式对话
 const startairesponse = (sessionId, currentMessage) => {
-  // 防抖
-  if (isTyping.value) {
+  // 只限制“同一个会话”内重复发送，允许切换到其他会话
+  if (typingBySessionId[sessionId]) {
     ElMessage.error('AI助手正在发送请稍后')
     return
   }
-  isTyping.value = true
+  typingBySessionId[sessionId] = true
+
+  const sessionMessages = ensureSessionMessages(sessionId)
   const aiMessage = {
     // ai唯一标识
     id: `ai_${Date.now()}${Math.random().toString(36).substr(2, 9)}`,
@@ -157,7 +207,27 @@ const startairesponse = (sessionId, currentMessage) => {
     content: '',
     creatAt: new Date().toLocaleString(),
   }
-  message.value.push(aiMessage)
+  const aimessage = aiMessage
+  sessionMessages.push(aiMessage)
+
+  // 为了让流式内容“分段显示”，避免 Vue 同批次更新导致一次性渲染
+  // 只在当前正在看的会话时触发渲染，并用 rAF 节流减少开销
+  let rafId = 0
+  const scheduleRender = () => {
+    if (rafId) return
+    rafId = window.requestAnimationFrame(() => {
+      rafId = 0
+      if (currentSession.value?.sessionId === sessionId) {
+        // 重新赋值一个新数组引用，确保触发视图更新
+        message.value = [...sessionMessages]
+      }
+    })
+  }
+
+  // 如果当前页面就在这个会话，就同步显示
+  if (currentSession.value?.sessionId === sessionId) {
+    message.value = sessionMessages
+  }
   const ctrl = new AbortController()
   // 调用流式接口
   fetchEventSource(`/api/psychological-chat/stream`, {
@@ -173,23 +243,19 @@ const startairesponse = (sessionId, currentMessage) => {
     }),
     signal: ctrl.signal,
     onopen: (response) => {
-      isTyping.value = false
       if (response.headers.get('content-type') !== 'text/event-stream') {
-        {
-          ElMessage.error('AI助手发送失败')
-          ctrl.abort()
-          return
-        }
+        ElMessage.error('AI助手发送失败')
+        typingBySessionId[sessionId] = false
+        ctrl.abort()
+        return
       }
     },
     onmessage: (event) => {
       const raw = event.data.trim()
       if (!raw) return
       const eventname = event.event
-      // 当前AI消息
-      const aimessage = message.value[message.value.length - 1]
       if (eventname === 'done') {
-        isTyping.value = false
+        typingBySessionId[sessionId] = false
         ctrl.abort()
         return
       }
@@ -197,17 +263,17 @@ const startairesponse = (sessionId, currentMessage) => {
       const ok = String(payload.code) === '200'
       if (ok && payload.data && payload.data.content) {
         aimessage.content += payload.data.content
+        scheduleRender()
       } else if (!ok) {
-        handlerror(payload.message || 'AI助手发送失败')
+        handlerror(payload.message || 'AI助手发送失败', sessionId, aimessage)
       }
     },
     onerror: (err) => {
-      handlerror(err.message || 'AI助手发送失败')
+      handlerror(err.message || 'AI助手发送失败', sessionId, aimessage)
       return err
     },
     onclose: () => {
-      isTyping.value = false
-     
+      typingBySessionId[sessionId] = false
     }
   })
     .then(res => {
@@ -216,50 +282,79 @@ const startairesponse = (sessionId, currentMessage) => {
     })
 }
 // 错误处理函数
-const handlerror = (error) => {
-  const aimessage = message.value[message.value.length - 1]
+const handlerror = (error, sessionId, aimessage) => {
   if (aimessage) {
     aimessage.content = 'AI回复失败，请重试'
   }
-  isTyping.value = false
+  typingBySessionId[sessionId] = false
   ElMessage.error('AI回复失败')
 }
 const message = ref([])
 // 点击会话
 const handlesessionclick = (session) => {
-  currentSession.value = session
-
-  getchatdetail(session.id).then(res => {
-    if (res.code === '200') {
-      message.value = res.data
-    }
-    else {
-      ElMessage.error(res.data.msg)
-    }
-  })
-  // 更新当前会话对象数据
   const sessiondata = {
     sessionId: "session_" + session.id,
     status: 'ACTIVE',
     sessionTitle: session.sessionTitle,
   }
   currentSession.value = sessiondata
+
+  // 先用本地缓存的消息，避免切换时把正在流式的内容覆盖掉
+  message.value = ensureSessionMessages(sessiondata.sessionId)
+
   // 获取情绪记录
   getemotionrecord()
+
+  getchatdetail(session.id).then(res => {
+    // 如果这个会话正在流式输入，就不覆盖本地增量内容
+    if (typingBySessionId[sessiondata.sessionId]) return
+    if (res.code === '200') {
+      messagesBySessionId[sessiondata.sessionId] = res.data || []
+      message.value = messagesBySessionId[sessiondata.sessionId]
+    }
+    else {
+      ElMessage.error(res.data.msg)
+    }
+  })
 }
 // 是否在删除
 const  deleting=ref(false)
 // 删除会话
 const handledeletesession = (sessionId) => {
   deleting.value=true
+  const deletedNorm = normalizeSessionId(sessionId)
+  const current = currentSession.value
+  const currentNorm = normalizeSessionId(current?.id ?? current?.sessionId)
+  // 删除前计算一下被删会话在列表里的位置，用于删除后的跳转
+  const deletedIndex = (sessionList.value || []).findIndex(
+    (item) => normalizeSessionId(item?.id) === deletedNorm
+  )
   deletechatrecord(sessionId).then(res => {
     if (res.code === '200') {
-      getsessionpage()
       ElMessage.success('会话删除成功')
-      deleting.value=false
+      getsessionpage().then((records) => {
+        const list = records || []
+        // 兜底：刷新后的列表里找不到当前会话（通常就是当前被删），就自动跳转
+        const currentStillExists = list.some(
+          (r) => normalizeSessionId(r?.id) === currentNorm
+        )
+        if (!currentStillExists) {
+          if (list.length > 0) {
+            const idx = Math.min(
+              deletedIndex >= 0 ? deletedIndex : 0,
+              list.length - 1
+            )
+            handlesessionclick(list[idx])
+          } else {
+            createnewsession()
+          }
+        }
+        deleting.value = false
+      })
     }
     else {
       ElMessage.error(res.data.msg)
+      deleting.value=false
     }
   })
 }
@@ -388,7 +483,7 @@ const getintensitytext=(level)=>{
           会话列表
         </div>
         <div class="session-list">
-          <div v-for="item in sessionList" :key="item.id" class="session-item" @click="handlesessionclick(item)"">
+          <div v-for="item in sessionList" :key="item.id" class="session-item" @click="handlesessionclick(item)">
               <div class=" session-info">
             <div class="session-title">
               {{ item.sessionTitle }}
@@ -414,7 +509,13 @@ const getintensitytext=(level)=>{
               </div>
             </div>
             <div class="session-actions">
-              <el-button text @click="handledeletesession(item.id)" :disabled="deleting" type="danger" size="small">
+              <el-button
+                text
+                @click.stop="handledeletesession(item.id)"
+                :disabled="deleting"
+                type="danger"
+                size="small"
+              >
                 <el-icon>
                   <DeleteFilled />
                 </el-icon>
@@ -437,7 +538,7 @@ const getintensitytext=(level)=>{
           <p>您贴心的AI心理健康助手</p>
         </div>
       </div>
-      <el-button circle @click="createnewsession" :disabled="isTyping" title="创建新会话">+</el-button>
+      <el-button circle @click="createnewsession"  title="创建新会话">+</el-button>
     </div>
     <!-- 聊天内容 -->
     <div class="chat-messages">
@@ -485,7 +586,7 @@ const getintensitytext=(level)=>{
     <div class="chat-input">
       <div class="input-container">
         <el-input type="textarea" v-model="inputMessage" placeholder="请输入想分享的内容" :disabled="isTyping" :rows="3"
-          class="message-input" clearable @keyup.enter="handlenewsession">
+          class="message-input" clearable @keyup.enter="handlenewsessionDebounced">
 
         </el-input>
         <div class="input-footer">
@@ -494,7 +595,7 @@ const getintensitytext=(level)=>{
         </div>
       </div>
       <el-button :disabled="inputMessage.trim() === '' || inputMessage.length > 500" class="send-btn"
-        @click="handlenewsession">
+        @click="handlenewsessionDebounced">
         <el-icon>
           <Promotion />
         </el-icon>

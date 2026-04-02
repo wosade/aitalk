@@ -27,18 +27,7 @@ request.interceptors.response.use(function (response) {
   if(data.code==='200'){
     return data
   }else{
-    if(data.code==='-1'){
-      if(!config.url?.includes('/login')){
-        ElMessage.error(data.msg||'登录过期，请重新登录')
-        // 清除登录信息
-        localStorage.removeItem('token')
-        // 跳转到登录页
-        router.push('/login')
-      }
-      else{
-        ElMessage.error(data.msg||'登录失败')
-      }
-    }
+    
   }
   return response;
 }, function (error) {

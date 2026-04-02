@@ -1,12 +1,16 @@
 <script setup>
-import { useRouter } from 'vue-router';
-  const router=useRouter()  
-  // 拿到侧边栏路由
-  const routes=router.options.routes[0].children;
-  // 点击侧边栏路由跳转
-  const selectmenu=(item)=>{
-    router.push(item.path);
-  }
+import { useRouter } from 'vue-router'
+import { computed } from 'vue'
+
+const router = useRouter()
+// 后台布局子路由（不依赖 routes 数组顺序）
+const routes = computed(() => {
+  const back = router.options.routes.find((r) => r.path === '/back')
+  return back?.children || []
+})
+const selectmenu = (item) => {
+  router.push(`/back/${item.path}`)
+}
 </script>
   <template>
     <div class="besides">
@@ -18,7 +22,7 @@ import { useRouter } from 'vue-router';
         </div>
       </div>
         <el-menu default-active="2" class="el-menu">
-          <el-menu-item v-for="item in routes" :key="item.path" :index="item.path" class="el-menu-item" @click="selectmenu(item)">
+          <el-menu-item v-for="item in routes" :key="item.path" :index="`/back/${item.path}`" class="el-menu-item" @click="selectmenu(item)">
             <!-- vue3动态组件 通过传入组件名称可以实现组件动态渲染 -->
             <el-icon><component :is="item.meta.icon" /></el-icon>
             {{item.meta.title}}

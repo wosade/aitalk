@@ -1,6 +1,6 @@
 <script setup>
 import { getknowledgearticle } from '@/api/font.js'
-import { ref, onMounted, reactive } from 'vue'
+import { ref, onMounted, reactive, onBeforeUnmount } from 'vue'
 import imgurl from '@/assets/book.png'
 import { useRouter } from 'vue-router'
 const router = useRouter()
@@ -21,13 +21,34 @@ const pagelist=reactive({
 })
 // 右侧文章列表
 const articlelist = ref([])
-const getlist=(params)=>{
-  getknowledgearticle(params).then(res => {
+const isLoadingList = ref(false)
+const hasMore = ref(true)
+const loadMoreTriggerRef = ref(null)
+// 滚动触底懒加载
+let observer = null
+
+const getlist = async (params, { append = false } = {}) => {
+  if (isLoadingList.value) return
+  if (!hasMore.value && append) return
+  isLoadingList.value = true
+  try {
+    const res = await getknowledgearticle(params)
     if (res.code == 200) {
-      pagelist.total=res.data.total
-      articlelist.value=res.data.records
+      pagelist.total = res.data.total
+      const records = res.data.records || []
+
+      if (append) {
+        articlelist.value = [...articlelist.value, ...records]
+      } else {
+        articlelist.value = records
+      }
+
+      const loadedCount = articlelist.value.length
+      hasMore.value = pagelist.total > 0 ? loadedCount < pagelist.total : records.length > 0
+    }
+  } finally {
+    isLoadingList.value = false
   }
-})
 }
 
 onMounted(() => {
@@ -36,7 +57,38 @@ onMounted(() => {
       knowledgearticle.value = res.data.records
     }
   })
- getlist(pagelist)
+
+  // 首次加载
+  hasMore.value = true
+  pagelist.currentPage = 1
+  articlelist.value = []
+  getlist(pagelist)
+
+  // 懒加载：滚动触底加载下一页
+  // 核心用的是浏览器原生的 IntersectionObserver（用于监听某个元素是否进入视口）：
+  observer = new IntersectionObserver(
+    (entries) => {
+      const entry = entries[0]
+      if (!entry?.isIntersecting) return
+      if (!hasMore.value) return
+      if (isLoadingList.value) return
+
+      pagelist.currentPage += 1
+      getlist(pagelist, { append: true })
+    },
+    { root: null, threshold: 0.1 }
+  )
+
+  if (loadMoreTriggerRef.value) {
+    observer.observe(loadMoreTriggerRef.value)
+  }
+})
+
+onBeforeUnmount(() => {
+  if (observer && loadMoreTriggerRef.value) {
+    observer.unobserve(loadMoreTriggerRef.value)
+  }
+  observer = null
 })
 // 获取图片
 const getimage=(url)=>{
@@ -48,15 +100,7 @@ const getimage=(url)=>{
   }
   return 'http://159.75.169.224:1235'+url
 }
-// 分页组件的函数
-const handleCurrentChange = (val) => {
-  pagelist.currentPage = val
-  getlist(pagelist)
-}
-const handleSizeChange = (val) => {
-  pagelist.pageSize = val
-  getlist(pagelist)
-}
+// 旧分页逻辑已替换为“滚动触底懒加载”
 // 跳转详情页
 const toDetail=(id)=>{
   router.push(`/articledetail?id=${id}`)
@@ -85,38 +129,66 @@ const toDetail=(id)=>{
       </div>
       <!-- 右侧内容 -->
       <div class="article-list">
-        <div v-for="item in articlelist" :key="item.id" class="article-item" @click="toDetail(item.id)">
-              <el-image :src="getimage(item.coverImage)"  style="width: 240px; height: 150px; border-radius: 8px;"></el-image>
-              <div class="info">
-                <div class="title">
-                  <h3>{{item.title}}</h3>
-                  <el-tag Plain type="primary">{{item.categoryName}}</el-tag>
-                </div>
-                <div style="margin-top: 10px;"></div>
-                <div class="flex-box">
-                  <el-icon><Avatar/></el-icon>
-                  <span>{{item.authorName}}</span>
-                </div>
-                <div class="flex-box">
-                  <el-icon><List/></el-icon>
-                  <span>{{ item.createdAt }}</span>
-                </div>
-                <div class="flex-box" style="margin-top: 20px;">
-              <el-icon>
-                <Platform />
-              </el-icon>
-              <span>观看人数：{{ item.watchCount || 0 }}</span>
-            </div>
+        <template v-if="articlelist.length > 0">
+          <div
+            v-for="item in articlelist"
+            :key="item.id"
+            class="article-item"
+            @click="toDetail(item.id)"
+          >
+            <el-image
+              :src="getimage(item.coverImage)"
+              style="width: 240px; height: 150px; border-radius: 8px"
+            ></el-image>
+            <div class="info">
+              <div class="title">
+                <h3>{{ item.title }}</h3>
+                <el-tag Plain type="primary">{{ item.categoryName }}</el-tag>
               </div>
-        </div>
+              <div style="margin-top: 10px"></div>
+              <div class="flex-box">
+                <el-icon><Avatar /></el-icon>
+                <span>{{ item.authorName }}</span>
+              </div>
+              <div class="flex-box">
+                <el-icon><List /></el-icon>
+                <span>{{ item.createdAt }}</span>
+              </div>
+              <div class="flex-box" style="margin-top: 20px">
+                <el-icon>
+                  <Platform />
+                </el-icon>
+                <span>观看人数：{{ item.watchCount || 0 }}</span>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- 首次加载骨架屏 -->
+        <template v-else-if="isLoadingList">
+          <div v-for="n in pagelist.size" :key="n" class="article-item skeleton-item">
+            <el-skeleton animated :rows="4" />
+          </div>
+        </template>
       </div>
     </div>
      <div class="pagination-wrapper">
-      <!-- 分页组件 -->
-      <el-pagination background layout="prev, pager, next" v-model:current-page="pagelist.currentPage"
-        v-model:page-size="pagelist.size" :total="pagelist.total" @size-change="handleSizeChange"
-        @current-change="handleCurrentChange" />
+      <div ref="loadMoreTriggerRef" class="load-more-trigger">
+        <span v-if="isLoadingList">加载中...</span>
+        <span v-else-if="!hasMore">没有更多了</span>
+        <span v-else>继续加载</span>
+      </div>
+
+      <!-- 追加加载下一页的底部骨架屏（列表已有内容时展示） -->
+      <div
+        v-if="isLoadingList && articlelist.length > 0"
+        class="bottom-skeleton"
+      >
+        <div v-for="n in 2" :key="n" class="article-item skeleton-item">
+          <el-skeleton animated :rows="4" />
         </div>
+      </div>
+    </div>
   </div>
 </template>
 <style scoped lang="less">
@@ -218,6 +290,25 @@ const toDetail=(id)=>{
     display: flex;
     justify-content: center;
     padding-bottom: 30px;
+    .load-more-trigger {
+      width: 100%;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6b7280;
+      font-size: 12px;
+    }
+    .bottom-skeleton {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+  }
+
+  .skeleton-item {
+    display: block; // 覆盖 article-item 的 flex 布局，让骨架屏更自然
   }
 }
 </style>
