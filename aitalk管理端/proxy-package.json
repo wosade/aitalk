@@ -1,0 +1,19 @@
+{
+  "name": "aitalk-proxy-server",
+  "version": "1.0.0",
+  "description": "代理服务器，将前端请求转发到后端",
+  "type": "module",
+  "main": "proxy-server.js",
+  "scripts": {
+    "start": "node proxy-server.js",
+    "dev": "node --watch proxy-server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "http-proxy": "^1.18.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

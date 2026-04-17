@@ -2,8 +2,12 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import router from '@/router/index'
 // 创建实例时配置默认值
+const baseURL = import.meta.env.VITE_API_BASE_URL 
+  ? `${import.meta.env.VITE_API_BASE_URL}`
+  : '/api'
+
 const request = axios.create({
-  baseURL: '/api',
+  baseURL: baseURL,
   timeout: 5000
 });
 // 添加请求拦截器

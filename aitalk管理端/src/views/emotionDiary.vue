@@ -140,7 +140,7 @@ const resetDiary=()=>{
     </div>
   </div>
 </template>
-<style scoped> 
+<style lang="less" scoped> 
 
 .emotionDiary-container {
   background: linear-gradient(135deg, #fafbfc 0%, #f7f9fc 50%, #f2f6fa 100%);

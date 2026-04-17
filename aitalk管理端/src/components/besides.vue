@@ -11,11 +11,12 @@ const routes = computed(() => {
 const selectmenu = (item) => {
   router.push(`/back/${item.path}`)
 }
+const imgUrl = new URL(`../assets/机器人.png`, import.meta.url).href
 </script>
   <template>
     <div class="besides">
       <div class="besidestop">
-        <el-image style="width:50px;height:50px" src="/src//assets/机器人.png"></el-image>
+        <el-image style="width:50px;height:50px" :src="imgUrl"></el-image>
         <div class="text">
           <div class="text1">心理智能AI助手</div>
           <div class="text2">陪伴你的心理健康</div>

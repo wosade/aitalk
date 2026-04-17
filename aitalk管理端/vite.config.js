@@ -3,6 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import path from 'path' // 重点：加上这一行
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/aitalk/',
   plugins: [vue()],
   resolve: {
     alias: {

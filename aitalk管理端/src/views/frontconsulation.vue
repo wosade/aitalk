@@ -14,7 +14,7 @@ let chatController = null;
 // 每个会话各自维护消息 & 是否正在流式输入
 const messagesBySessionId = reactive({})
 const typingBySessionId = reactive({})
-
+// 确保每个会话都有消息容器
 const ensureSessionMessages = (sessionId) => {
   if (!sessionId) return []
   if (!messagesBySessionId[sessionId]) {
@@ -198,7 +198,7 @@ const startairesponse = (sessionId, currentMessage) => {
     return
   }
   typingBySessionId[sessionId] = true
-
+// 确保每个会话都有消息容器
   const sessionMessages = ensureSessionMessages(sessionId)
   const aiMessage = {
     // ai唯一标识

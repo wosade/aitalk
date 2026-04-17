@@ -189,7 +189,7 @@ const beforeClose=()=>{
         <el-upload :show-file-list="false"  class="avatar-uploader" :before-upload="beforeUpload" :http-request="uploadAvatar" accept="image/*">
           <div v-if="!imgurl" class="avatar-uploader">
             <p>+</p>
-          </div class="inputimg">
+          </div>
           <img v-else :src="imgurl" class="avatar">
         </el-upload>
         <el-button type="danger" @click="imgurl=''" style="margin-top: 10px;" v-if="imgurl">撤销</el-button></div>
