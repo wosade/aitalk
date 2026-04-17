@@ -6,7 +6,7 @@ import iconUrl2 from '@/assets/like.png'
 import iconUrl3 from '@/assets/comments.png'
 import iconUrl4 from  '@/assets/smile.png'
 // 引入所有echarts组件
-import * as echarts from 'echarts'
+import * as echarts from 'echarts/core'
 // 分析数据
 const analysis = ref({})
 onMounted(() => {
