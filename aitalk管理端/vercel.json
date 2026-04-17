@@ -1,0 +1,37 @@
+{
+  "version": 2,
+  "name": "aitalk",
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/dist/$1"
+    }
+  ],
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "functions": {
+    "dist/**": {
+      "runtime": "@vercel/static"
+    }
+  },
+  "env": {
+    "VITE_BASE_PATH": "/"
+  }
+}
