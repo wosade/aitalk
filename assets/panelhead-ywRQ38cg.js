@@ -1,0 +1,1 @@
+import{_ as a,a as o,c as n,f as e,t as c,B as d}from"./index-DJiLCTtW.js";const r={class:"panelhead"},_={class:"title"},i={class:"button"},l={__name:"panelhead",props:{title:String},setup(t){return(s,p)=>(o(),n("div",r,[e("div",_,c(t.title),1),e("div",i,[d(s.$slots,"button",{},void 0,!0)])]))}},u=a(l,[["__scopeId","data-v-414e87d5"]]);export{u as P};
