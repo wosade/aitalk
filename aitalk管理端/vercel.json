@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "name": "aitalk",
   "builds": [
     {
       "src": "package.json",
@@ -11,6 +10,10 @@
     }
   ],
   "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "http://159.75.169.224:1235/$1"
+    },
     {
       "src": "/(.*)",
       "dest": "/dist/$1"
@@ -25,13 +28,5 @@
       "source": "/(.*)",
       "destination": "/index.html"
     }
-  ],
-  "functions": {
-    "dist/**": {
-      "runtime": "@vercel/static"
-    }
-  },
-  "env": {
-    "VITE_BASE_PATH": "/"
-  }
+  ]
 }
