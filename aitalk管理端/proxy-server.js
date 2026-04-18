@@ -39,6 +39,11 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+// 添加健康检查接口
+app.get('/', (req, res) => {
+  res.send('Proxy server is running!');
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`代理服务器运行在 http://localhost:${PORT}`);

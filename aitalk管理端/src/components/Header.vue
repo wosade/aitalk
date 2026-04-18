@@ -29,7 +29,7 @@ const out = () => {
         </div>
         <template #reference>
           <div style="display: flex; align-items: center">
-            <el-avatar src="/src//assets/机器人.png" style="width: 30px; height: 30px; margin-right: 5px"></el-avatar>
+            <el-avatar src="/assets/机器人.png" style="width: 30px; height: 30px; margin-right: 5px"></el-avatar>
             <p>{{ userInfo?.nickname }}</p>
             <el-icon><ArrowDown /></el-icon>
           </div>
