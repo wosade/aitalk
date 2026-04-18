@@ -4,23 +4,9 @@
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "framework": "vite",
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
-    },
-    {
-      "src": "api/[...proxy].js",
-      "use": "@vercel/node"
-    }
-  ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/[...proxy].js" },
-    { "src": "/assets/(.*)", "dest": "/dist/assets/$1" },
+    { "src": "/api/(.*)", "dest": "http://159.75.169.224:1235/api/$1" },
     { "handle": "filesystem" },
-    { "src": "/.*", "dest": "/dist/index.html" }
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
