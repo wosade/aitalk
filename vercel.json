@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "aitalk管理端/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "http://159.75.169.224:1235/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/aitalk管理端/$1"
+    }
+  ],
+  "buildCommand": "cd aitalk管理端 && npm run build",
+  "outputDirectory": "aitalk管理端/dist",
+  "installCommand": "cd aitalk管理端 && npm install",
+  "framework": "vite"
+}
